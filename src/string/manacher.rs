@@ -54,8 +54,7 @@ pub fn manacher(s: String) -> String {
         radius += 1;
         // 2: Checking palindrome.
         // Need to care about overflow usize.
-        while i >= radius && i + radius <= chars.len() - 1 && chars[i - radius] == chars[i + radius]
-        {
+        while i >= radius && i + radius < chars.len() && chars[i - radius] == chars[i + radius] {
             length_of_palindrome[i] += 2;
             radius += 1;
         }
@@ -69,7 +68,7 @@ pub fn manacher(s: String) -> String {
         .map(|(idx, _)| idx)
         .unwrap();
     let radius_of_max = (length_of_palindrome[center_of_max] - 1) / 2;
-    let answer = &chars[(center_of_max - radius_of_max)..(center_of_max + radius_of_max + 1)]
+    let answer = &chars[(center_of_max - radius_of_max)..=(center_of_max + radius_of_max)]
         .iter()
         .collect::<String>();
     answer.replace('#', "")

@@ -102,12 +102,12 @@ impl PCG32 {
     pub fn get_state(&self) -> u64 {
         self.state
     }
-    pub fn iter_mut(&mut self) -> IterMut {
+    pub fn iter_mut(&mut self) -> IterMut<'_> {
         IterMut { pcg: self }
     }
 }
 
-impl<'a> Iterator for IterMut<'a> {
+impl Iterator for IterMut<'_> {
     type Item = u32;
     fn next(&mut self) -> Option<Self::Item> {
         Some(self.pcg.get_u32())

@@ -31,7 +31,7 @@ fn collect_six_bits(from: (u8, u8), offset: u8) -> u8 {
     ((combined & (0b1111110000000000u16 >> offset)) >> (10 - offset)) as u8
 }
 
-pub fn base64_encode(data: &Vec<u8>) -> String {
+pub fn base64_encode(data: &[u8]) -> String {
     let mut bits_encoded = 0usize;
     let mut encoded_string = String::new();
     // Using modulo twice to prevent an underflow, Wolfram|Alpha says this is optimal
@@ -69,7 +69,7 @@ pub fn base64_decode(data: &str) -> Result<Vec<u8>, (&str, u8)> {
     'decodeloop: loop {
         while collected_bits < 8 {
             if let Some(nextbyte) = databytes.next() {
-                // Finds the first occurence of the latest byte
+                // Finds the first occurrence of the latest byte
                 if let Some(idx) = CHARSET.iter().position(|&x| x == nextbyte) {
                     byte_buffer |= ((idx & 0b00111111) as u16) << (10 - collected_bits);
                     collected_bits += 6;

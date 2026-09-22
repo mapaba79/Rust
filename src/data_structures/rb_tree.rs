@@ -76,14 +76,12 @@ impl<K: Ord, V> RBTree<K, V> {
                 }
             }
             node = Box::into_raw(Box::new(RBNode::new(key, value)));
-            if !parent.is_null() {
-                if (*node).key < (*parent).key {
-                    (*parent).left = node;
-                } else {
-                    (*parent).right = node;
-                }
-            } else {
+            if parent.is_null() {
                 self.root = node;
+            } else if (*node).key < (*parent).key {
+                (*parent).left = node;
+            } else {
+                (*parent).right = node;
             }
             (*node).parent = parent;
             insert_fixup(self, node);
@@ -258,7 +256,55 @@ unsafe fn insert_fixup<K: Ord, V>(tree: &mut RBTree<K, V>, mut node: *mut RBNode
 
         gparent = (*parent).parent;
         tmp = (*gparent).right;
-        if parent != tmp {
+        if parent == tmp {
+            /* parent = (*gparent).right */
+            tmp = (*gparent).left;
+            if !tmp.is_null() && matches!((*tmp).color, Color::Red) {
+                /*
+                 * Case 1 - color flips and recurse at g
+                 *    G               g
+                 *   / \             / \
+                 *  u   p    -->    U   P
+                 *       \               \
+                 *        n               n
+                 */
+
+                (*parent).color = Color::Black;
+                (*tmp).color = Color::Black;
+                (*gparent).color = Color::Red;
+                node = gparent;
+                parent = (*node).parent;
+                continue;
+            }
+            tmp = (*parent).left;
+            if node == tmp {
+                /*
+                 * Case 2 - right rotate at p (then Case 3)
+                 *
+                 *       G             G
+                 *      / \           / \
+                 *     U   p   -->   U   n
+                 *        /               \
+                 *       n                 p
+                 */
+
+                right_rotate(tree, parent);
+                parent = node;
+            }
+            /*
+             * Case 3 - left rotate at g
+             *
+             *       G             P
+             *      / \           / \
+             *     U   p   -->   g   n
+             *          \       /
+             *           n     U
+             */
+
+            (*parent).color = Color::Black;
+            (*gparent).color = Color::Red;
+            left_rotate(tree, gparent);
+        } else {
             /* parent = (*gparent).left */
             if !tmp.is_null() && matches!((*tmp).color, Color::Red) {
                 /*
@@ -307,54 +353,6 @@ unsafe fn insert_fixup<K: Ord, V>(tree: &mut RBTree<K, V>, mut node: *mut RBNode
             (*parent).color = Color::Black;
             (*gparent).color = Color::Red;
             right_rotate(tree, gparent);
-        } else {
-            /* parent = (*gparent).right */
-            tmp = (*gparent).left;
-            if !tmp.is_null() && matches!((*tmp).color, Color::Red) {
-                /*
-                 * Case 1 - color flips and recurse at g
-                 *    G               g
-                 *   / \             / \
-                 *  u   p    -->    U   P
-                 *       \               \
-                 *        n               n
-                 */
-
-                (*parent).color = Color::Black;
-                (*tmp).color = Color::Black;
-                (*gparent).color = Color::Red;
-                node = gparent;
-                parent = (*node).parent;
-                continue;
-            }
-            tmp = (*parent).left;
-            if node == tmp {
-                /*
-                 * Case 2 - right rotate at p (then Case 3)
-                 *
-                 *       G             G
-                 *      / \           / \
-                 *     U   p   -->   U   n
-                 *        /               \
-                 *       n                 p
-                 */
-
-                right_rotate(tree, parent);
-                parent = node;
-            }
-            /*
-             * Case 3 - left rotate at g
-             *
-             *       G             P
-             *      / \           / \
-             *     U   p   -->   g   n
-             *          \       /
-             *           n     U
-             */
-
-            (*parent).color = Color::Black;
-            (*gparent).color = Color::Red;
-            left_rotate(tree, gparent);
         }
         break;
     }
@@ -369,6 +367,12 @@ unsafe fn delete_fixup<K: Ord, V>(tree: &mut RBTree<K, V>, mut parent: *mut RBNo
     let mut sr: *mut RBNode<K, V>;
 
     loop {
+        // rb-tree will keep color balance up to root,
+        // if parent is null, we are done.
+        if parent.is_null() {
+            break;
+        }
+
         /*
          * Loop invariants:
          * - node is black (or null on first iteration)
@@ -377,7 +381,52 @@ unsafe fn delete_fixup<K: Ord, V>(tree: &mut RBTree<K, V>, mut parent: *mut RBNo
          *   black node count that is 1 lower than other leaf paths.
          */
         sibling = (*parent).right;
-        if node != sibling {
+        if node == sibling {
+            /* node = (*parent).right */
+            sibling = (*parent).left;
+            if matches!((*sibling).color, Color::Red) {
+                /*
+                 * Case 1 - right rotate at parent
+                 */
+
+                right_rotate(tree, parent);
+                (*parent).color = Color::Red;
+                (*sibling).color = Color::Black;
+                sibling = (*parent).right;
+            }
+            sl = (*sibling).left;
+            sr = (*sibling).right;
+
+            if !sr.is_null() && matches!((*sr).color, Color::Red) {
+                /*
+                 * Case 2 - left rotate at sibling and then right rotate at parent
+                 */
+
+                (*sr).color = (*parent).color;
+                (*parent).color = Color::Black;
+                left_rotate(tree, sibling);
+                right_rotate(tree, parent);
+            } else if !sl.is_null() && matches!((*sl).color, Color::Red) {
+                /*
+                 * Case 3 - right rotate at parent
+                 */
+
+                (*sl).color = (*parent).color;
+                right_rotate(tree, parent);
+            } else {
+                /*
+                 * Case 4 - color flip
+                 */
+
+                (*sibling).color = Color::Red;
+                if matches!((*parent).color, Color::Black) {
+                    node = parent;
+                    parent = (*node).parent;
+                    continue;
+                }
+                (*parent).color = Color::Black;
+            }
+        } else {
             /* node = (*parent).left */
             if matches!((*sibling).color, Color::Red) {
                 /*
@@ -440,51 +489,6 @@ unsafe fn delete_fixup<K: Ord, V>(tree: &mut RBTree<K, V>, mut parent: *mut RBNo
                  *  N   S    -->    N   s
                  *     / \             / \
                  *    Sl  Sr          Sl  Sr
-                 */
-
-                (*sibling).color = Color::Red;
-                if matches!((*parent).color, Color::Black) {
-                    node = parent;
-                    parent = (*node).parent;
-                    continue;
-                }
-                (*parent).color = Color::Black;
-            }
-        } else {
-            /* node = (*parent).right */
-            sibling = (*parent).left;
-            if matches!((*sibling).color, Color::Red) {
-                /*
-                 * Case 1 - right rotate at parent
-                 */
-
-                right_rotate(tree, parent);
-                (*parent).color = Color::Red;
-                (*sibling).color = Color::Black;
-                sibling = (*parent).right;
-            }
-            sl = (*sibling).left;
-            sr = (*sibling).right;
-
-            if !sr.is_null() && matches!((*sr).color, Color::Red) {
-                /*
-                 * Case 2 - left rotate at sibling and then right rotate at parent
-                 */
-
-                (*sr).color = (*parent).color;
-                (*parent).color = Color::Black;
-                left_rotate(tree, sibling);
-                right_rotate(tree, parent);
-            } else if !sl.is_null() && matches!((*sl).color, Color::Red) {
-                /*
-                 * Case 3 - right rotate at parent
-                 */
-
-                (*sl).color = (*parent).color;
-                right_rotate(tree, parent);
-            } else {
-                /*
-                 * Case 4 - color flip
                  */
 
                 (*sibling).color = Color::Red;
@@ -648,5 +652,24 @@ mod tests {
         tree.delete(&11);
         let s: String = tree.iter().map(|x| x.value).collect();
         assert_eq!(s, "hlo orl!");
+    }
+
+    #[test]
+    fn delete_edge_case_null_pointer_guard() {
+        let mut tree = RBTree::<i8, i8>::new();
+        tree.insert(4, 4);
+        tree.insert(2, 2);
+        tree.insert(5, 5);
+        tree.insert(0, 0);
+        tree.insert(3, 3);
+        tree.insert(-1, -1);
+        tree.insert(1, 1);
+        tree.insert(-2, -2);
+        tree.insert(6, 6);
+        tree.insert(7, 7);
+        tree.insert(8, 8);
+        tree.delete(&1);
+        tree.delete(&3);
+        tree.delete(&-1);
     }
 }

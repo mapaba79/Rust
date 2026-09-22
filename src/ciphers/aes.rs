@@ -318,7 +318,7 @@ fn key_expansion(init_key: &[Byte], num_rounds: usize) -> Vec<Byte> {
 }
 
 fn add_round_key(data: &mut [Byte], round_key: &[Byte]) {
-    assert!(data.len() % AES_BLOCK_SIZE == 0 && round_key.len() == AES_BLOCK_SIZE);
+    assert!(data.len().is_multiple_of(AES_BLOCK_SIZE) && round_key.len() == AES_BLOCK_SIZE);
     let num_blocks = data.len() / AES_BLOCK_SIZE;
     data.iter_mut()
         .zip(round_key.repeat(num_blocks))
@@ -348,7 +348,7 @@ fn mix_column_blocks(data: &mut [Byte], mode: AesMode) {
 }
 
 fn padding<T: Clone + Default>(data: &[T], block_size: usize) -> Vec<T> {
-    if data.len() % block_size == 0 {
+    if data.len().is_multiple_of(block_size) {
         Vec::from(data)
     } else {
         let num_blocks = data.len() / block_size + 1;
@@ -434,7 +434,7 @@ fn transpose_block(block: &mut [u8]) {
 }
 
 fn bytes_to_word(bytes: &[Byte]) -> Word {
-    assert!(bytes.len() == AES_WORD_SIZE);
+    assert_eq!(bytes.len(), AES_WORD_SIZE);
     let mut word = 0;
     for (i, &byte) in bytes.iter().enumerate() {
         word |= (byte as Word) << (8 * i);

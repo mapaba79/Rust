@@ -10,7 +10,7 @@
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use rand::Rng;
+use rand::RngExt;
 
 use super::{fast_power, PCG32};
 
@@ -78,7 +78,7 @@ fn is_residue(x: u64, modulus: u64) -> bool {
 ///
 /// <https://en.wikipedia.org/wiki/Legendre_symbol>
 pub fn legendre_symbol(a: u64, odd_prime: u64) -> i64 {
-    debug_assert!(odd_prime % 2 != 0, "prime must be odd");
+    debug_assert!(!odd_prime.is_multiple_of(2), "odd_prime must be odd");
     if a == 0 {
         0
     } else if is_residue(a, odd_prime) {
@@ -152,9 +152,9 @@ pub fn tonelli_shanks(a: i64, odd_prime: u64) -> Option<u64> {
     let power_mod_p = |b, e| fast_power(b as usize, e as usize, p as usize) as u128;
 
     // find generator: choose a random non-residue n mod p
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let n = loop {
-        let n = rng.gen_range(0..p);
+        let n = rng.random_range(0..p);
         if legendre_symbol(n as u64, p as u64) == -1 {
             break n;
         }

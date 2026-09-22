@@ -1,14 +1,14 @@
 use std::cmp::{Ord, Ordering};
 
-use rand::Rng;
+use rand::RngExt;
 
 fn _quick_sort_3_ways<T: Ord>(arr: &mut [T], lo: usize, hi: usize) {
     if lo >= hi {
         return;
     }
 
-    let mut rng = rand::thread_rng();
-    arr.swap(lo, rng.gen_range(lo..hi + 1));
+    let mut rng = rand::rng();
+    arr.swap(lo, rng.random_range(lo..=hi));
 
     let mut lt = lo; // arr[lo+1, lt] < v
     let mut gt = hi + 1; // arr[gt, r] > v

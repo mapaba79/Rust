@@ -58,7 +58,7 @@ impl VebTree {
         self.max
     }
 
-    pub fn iter(&self) -> VebTreeIter {
+    pub fn iter(&self) -> VebTreeIter<'_> {
         VebTreeIter::new(self)
     }
 
@@ -215,13 +215,13 @@ pub struct VebTreeIter<'a> {
 }
 
 impl<'a> VebTreeIter<'a> {
-    pub fn new(tree: &'a VebTree) -> VebTreeIter {
+    pub fn new(tree: &'a VebTree) -> VebTreeIter<'a> {
         let curr = if tree.empty() { None } else { Some(tree.min) };
         VebTreeIter { tree, curr }
     }
 }
 
-impl<'a> Iterator for VebTreeIter<'a> {
+impl Iterator for VebTreeIter<'_> {
     type Item = u32;
 
     fn next(&mut self) -> Option<u32> {
@@ -235,7 +235,7 @@ impl<'a> Iterator for VebTreeIter<'a> {
 #[cfg(test)]
 mod test {
     use super::VebTree;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::{rngs::StdRng, RngExt, SeedableRng};
 
     fn test_veb_tree(size: u32, mut elements: Vec<u32>, exclude: Vec<u32>) {
         // Insert elements
@@ -256,11 +256,11 @@ mod test {
         elements.sort();
         elements.dedup();
         for (i, element) in tree.iter().enumerate() {
-            assert!(elements[i] == element);
+            assert_eq!(elements[i], element);
         }
         for i in 1..elements.len() {
-            assert!(tree.succ(elements[i - 1]) == Some(elements[i]));
-            assert!(tree.pred(elements[i]) == Some(elements[i - 1]));
+            assert_eq!(tree.succ(elements[i - 1]), Some(elements[i]));
+            assert_eq!(tree.pred(elements[i]), Some(elements[i - 1]));
         }
     }
 
@@ -322,21 +322,21 @@ mod test {
     #[test]
     fn test_10_256() {
         let mut rng = StdRng::seed_from_u64(0);
-        let elements: Vec<u32> = (0..10).map(|_| rng.gen_range(0..255)).collect();
+        let elements: Vec<u32> = (0..10).map(|_| rng.random_range(0..255)).collect();
         test_veb_tree(256, elements, Vec::new());
     }
 
     #[test]
     fn test_100_256() {
         let mut rng = StdRng::seed_from_u64(0);
-        let elements: Vec<u32> = (0..100).map(|_| rng.gen_range(0..255)).collect();
+        let elements: Vec<u32> = (0..100).map(|_| rng.random_range(0..255)).collect();
         test_veb_tree(256, elements, Vec::new());
     }
 
     #[test]
     fn test_100_300() {
         let mut rng = StdRng::seed_from_u64(0);
-        let elements: Vec<u32> = (0..100).map(|_| rng.gen_range(0..255)).collect();
+        let elements: Vec<u32> = (0..100).map(|_| rng.random_range(0..255)).collect();
         test_veb_tree(300, elements, Vec::new());
     }
 }

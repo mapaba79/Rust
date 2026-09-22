@@ -1,5 +1,6 @@
 mod bead_sort;
 mod binary_insertion_sort;
+mod bingo_sort;
 mod bitonic_sort;
 mod bogo_sort;
 mod bubble_sort;
@@ -25,16 +26,18 @@ mod radix_sort;
 mod selection_sort;
 mod shell_sort;
 mod sleep_sort;
-#[cfg(test)]
 mod sort_utils;
 mod stooge_sort;
+mod strand_sort;
 mod tim_sort;
+mod tournament_sort;
 mod tree_sort;
 mod wave_sort;
 mod wiggle_sort;
 
 pub use self::bead_sort::bead_sort;
 pub use self::binary_insertion_sort::binary_insertion_sort;
+pub use self::bingo_sort::bingo_sort;
 pub use self::bitonic_sort::bitonic_sort;
 pub use self::bogo_sort::bogo_sort;
 pub use self::bubble_sort::bubble_sort;
@@ -63,7 +66,9 @@ pub use self::selection_sort::selection_sort;
 pub use self::shell_sort::shell_sort;
 pub use self::sleep_sort::sleep_sort;
 pub use self::stooge_sort::stooge_sort;
+pub use self::strand_sort::strand_sort;
 pub use self::tim_sort::tim_sort;
+pub use self::tournament_sort::tournament_sort;
 pub use self::tree_sort::tree_sort;
 pub use self::wave_sort::wave_sort;
 pub use self::wiggle_sort::wiggle_sort;
@@ -80,17 +85,16 @@ where
 {
     use std::collections::HashSet;
 
-    match a.len() == b.len() {
-        true => {
-            // This is O(n^2) but performs better on smaller data sizes
-            //b.iter().all(|item| a.contains(item))
+    if a.len() == b.len() {
+        // This is O(n^2) but performs better on smaller data sizes
+        //b.iter().all(|item| a.contains(item))
 
-            // This is O(n), performs well on larger data sizes
-            let set_a: HashSet<&T> = a.iter().collect();
-            let set_b: HashSet<&T> = b.iter().collect();
-            set_a == set_b
-        }
-        false => false,
+        // This is O(n), performs well on larger data sizes
+        let set_a: HashSet<&T> = a.iter().collect();
+        let set_b: HashSet<&T> = b.iter().collect();
+        set_a == set_b
+    } else {
+        false
     }
 }
 

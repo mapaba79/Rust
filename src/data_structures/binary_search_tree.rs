@@ -71,26 +71,22 @@ where
 
     /// Insert a value into the appropriate location in this tree.
     pub fn insert(&mut self, value: T) {
-        if self.value.is_none() {
-            self.value = Some(value);
-        } else {
-            match &self.value {
-                None => (),
-                Some(key) => {
-                    let target_node = if value < *key {
-                        &mut self.left
-                    } else {
-                        &mut self.right
-                    };
-                    match target_node {
-                        Some(ref mut node) => {
-                            node.insert(value);
-                        }
-                        None => {
-                            let mut node = BinarySearchTree::new();
-                            node.insert(value);
-                            *target_node = Some(Box::new(node));
-                        }
+        match &self.value {
+            None => self.value = Some(value),
+            Some(key) => {
+                let target_node = if value < *key {
+                    &mut self.left
+                } else {
+                    &mut self.right
+                };
+                match target_node {
+                    Some(ref mut node) => {
+                        node.insert(value);
+                    }
+                    None => {
+                        let mut node = BinarySearchTree::new();
+                        node.value = Some(value);
+                        *target_node = Some(Box::new(node));
                     }
                 }
             }
@@ -188,11 +184,11 @@ where
     stack: Vec<&'a BinarySearchTree<T>>,
 }
 
-impl<'a, T> BinarySearchTreeIter<'a, T>
+impl<T> BinarySearchTreeIter<'_, T>
 where
     T: Ord,
 {
-    pub fn new(tree: &BinarySearchTree<T>) -> BinarySearchTreeIter<T> {
+    pub fn new(tree: &BinarySearchTree<T>) -> BinarySearchTreeIter<'_, T> {
         let mut iter = BinarySearchTreeIter { stack: vec![tree] };
         iter.stack_push_left();
         iter
@@ -216,8 +212,8 @@ where
             None
         } else {
             let node = self.stack.pop().unwrap();
-            if node.right.is_some() {
-                self.stack.push(node.right.as_ref().unwrap().deref());
+            if let Some(right_node) = &node.right {
+                self.stack.push(right_node.deref());
                 self.stack_push_left();
             }
             node.value.as_ref()

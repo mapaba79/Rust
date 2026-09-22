@@ -30,21 +30,19 @@ pub fn fast_factorial(n: usize) -> BigUint {
     // get list of primes that will be factors of n!
     let primes = sieve_of_eratosthenes(n);
 
-    let mut p_indeces = BTreeMap::new();
-
     // Map the primes with their index
-    primes.into_iter().for_each(|p| {
-        p_indeces.insert(p, index(p, n));
-    });
+    let p_indices = primes
+        .into_iter()
+        .map(|p| (p, index(p, n)))
+        .collect::<BTreeMap<_, _>>();
 
-    let max_bits = p_indeces.get(&2).unwrap().next_power_of_two().ilog2();
+    let max_bits = p_indices[&2].next_power_of_two().ilog2() + 1;
 
     // Create a Vec of 1's
-    let mut a = Vec::with_capacity(max_bits as usize);
-    a.resize(max_bits as usize, BigUint::one());
+    let mut a = vec![BigUint::one(); max_bits as usize];
 
     // For every prime p, multiply a[i] by p if the ith bit of p's index is 1
-    for (p, i) in p_indeces.into_iter() {
+    for (p, i) in p_indices {
         let mut bit = 1usize;
         while bit.ilog2() < max_bits {
             if (bit & i) > 0 {
@@ -64,14 +62,26 @@ pub fn fast_factorial(n: usize) -> BigUint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::big_integer::hello_bigmath::factorial;
+    use crate::math::factorial::factorial_bigmath;
 
     #[test]
     fn fact() {
-        assert_eq!(fast_factorial(30), factorial(30));
-        assert_eq!(fast_factorial(52), factorial(52));
-        assert_eq!(fast_factorial(100), factorial(100));
-        assert_eq!(fast_factorial(1000), factorial(1000));
-        assert_eq!(fast_factorial(5000), factorial(5000));
+        assert_eq!(fast_factorial(0), BigUint::one());
+        assert_eq!(fast_factorial(1), BigUint::one());
+        assert_eq!(fast_factorial(2), factorial_bigmath(2));
+        assert_eq!(fast_factorial(3), factorial_bigmath(3));
+        assert_eq!(fast_factorial(6), factorial_bigmath(6));
+        assert_eq!(fast_factorial(7), factorial_bigmath(7));
+        assert_eq!(fast_factorial(10), factorial_bigmath(10));
+        assert_eq!(fast_factorial(11), factorial_bigmath(11));
+        assert_eq!(fast_factorial(18), factorial_bigmath(18));
+        assert_eq!(fast_factorial(19), factorial_bigmath(19));
+        assert_eq!(fast_factorial(30), factorial_bigmath(30));
+        assert_eq!(fast_factorial(34), factorial_bigmath(34));
+        assert_eq!(fast_factorial(35), factorial_bigmath(35));
+        assert_eq!(fast_factorial(52), factorial_bigmath(52));
+        assert_eq!(fast_factorial(100), factorial_bigmath(100));
+        assert_eq!(fast_factorial(1000), factorial_bigmath(1000));
+        assert_eq!(fast_factorial(5000), factorial_bigmath(5000));
     }
 }

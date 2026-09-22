@@ -10,7 +10,7 @@ use std::fmt::Debug;
 /// It is generic over:
 /// * Eval, which could be a float, or any other totally ordered type, so that we can rank solutions to our problem
 /// * Rng: a random number generator (could be thread rng, etc.)
-pub trait Chromosome<Rng: rand::Rng, Eval> {
+pub trait Chromosome<Rng: rand::RngExt, Eval> {
     /// Mutates this Chromosome, changing its genes
     fn mutate(&mut self, rng: &mut Rng);
 
@@ -22,7 +22,7 @@ pub trait Chromosome<Rng: rand::Rng, Eval> {
     fn fitness(&self) -> Eval;
 }
 
-pub trait SelectionStrategy<Rng: rand::Rng> {
+pub trait SelectionStrategy<Rng: rand::RngExt> {
     fn new(rng: Rng) -> Self;
 
     /// Selects a portion of the population for reproduction
@@ -36,10 +36,11 @@ pub trait SelectionStrategy<Rng: rand::Rng> {
 
 /// A roulette wheel selection strategy
 /// https://en.wikipedia.org/wiki/Fitness_proportionate_selection
-pub struct RouletteWheel<Rng: rand::Rng> {
+#[allow(dead_code)]
+pub struct RouletteWheel<Rng: rand::RngExt> {
     rng: Rng,
 }
-impl<Rng: rand::Rng> SelectionStrategy<Rng> for RouletteWheel<Rng> {
+impl<Rng: rand::RngExt> SelectionStrategy<Rng> for RouletteWheel<Rng> {
     fn new(rng: Rng) -> Self {
         Self { rng }
     }
@@ -68,7 +69,7 @@ impl<Rng: rand::Rng> SelectionStrategy<Rng> for RouletteWheel<Rng> {
             return (parents[0], parents[1]);
         }
         let sum: f64 = fitnesses.iter().sum();
-        let mut spin = self.rng.gen_range(0.0..=sum);
+        let mut spin = self.rng.random_range(0.0..=sum);
         for individual in population {
             let fitness: f64 = individual.fitness().into();
             if spin <= fitness {
@@ -84,10 +85,11 @@ impl<Rng: rand::Rng> SelectionStrategy<Rng> for RouletteWheel<Rng> {
     }
 }
 
-pub struct Tournament<const K: usize, Rng: rand::Rng> {
+#[allow(dead_code)]
+pub struct Tournament<const K: usize, Rng: rand::RngExt> {
     rng: Rng,
 }
-impl<const K: usize, Rng: rand::Rng> SelectionStrategy<Rng> for Tournament<K, Rng> {
+impl<const K: usize, Rng: rand::RngExt> SelectionStrategy<Rng> for Tournament<K, Rng> {
     fn new(rng: Rng) -> Self {
         Self { rng }
     }
@@ -104,7 +106,7 @@ impl<const K: usize, Rng: rand::Rng> SelectionStrategy<Rng> for Tournament<K, Rn
         // This means we can draw K random (distinct) numbers between (0..population.len()) and return the chromosomes at the 2 lowest indices
         let mut picked_indices = BTreeSet::new(); // will keep indices ordered
         while picked_indices.len() < K {
-            picked_indices.insert(self.rng.gen_range(0..population.len()));
+            picked_indices.insert(self.rng.random_range(0..population.len()));
         }
         let mut iter = picked_indices.into_iter();
         (
@@ -116,7 +118,7 @@ impl<const K: usize, Rng: rand::Rng> SelectionStrategy<Rng> for Tournament<K, Rn
 
 type Comparator<T> = Box<dyn FnMut(&T, &T) -> Ordering>;
 pub struct GeneticAlgorithm<
-    Rng: rand::Rng,
+    Rng: rand::RngExt,
     Eval: PartialOrd,
     C: Chromosome<Rng, Eval>,
     Selection: SelectionStrategy<Rng>,
@@ -138,7 +140,7 @@ pub struct GenericAlgorithmParams {
 }
 
 impl<
-        Rng: rand::Rng,
+        Rng: rand::RngExt,
         Eval: Into<f64> + PartialOrd + Debug,
         C: Chromosome<Rng, Eval> + Clone + Debug,
         Selection: SelectionStrategy<Rng>,
@@ -185,7 +187,7 @@ impl<
 
             // 3. Apply random mutations to the whole population
             for chromosome in self.population.iter_mut() {
-                if self.rng.gen::<f64>() <= self.mutation_chance {
+                if self.rng.random::<f64>() <= self.mutation_chance {
                     chromosome.mutate(&mut self.rng);
                 }
             }
@@ -193,7 +195,7 @@ impl<
             let mut new_population = Vec::with_capacity(self.population.len() + 1);
             while new_population.len() < self.population.len() {
                 let (p1, p2) = self.selection.select(&self.population);
-                if self.rng.gen::<f64>() <= self.crossover_chance {
+                if self.rng.random::<f64>() <= self.crossover_chance {
                     let child = p1.crossover(p2, &mut self.rng);
                     new_population.push(child);
                 } else {
@@ -220,7 +222,7 @@ mod tests {
         Tournament,
     };
     use rand::rngs::ThreadRng;
-    use rand::{thread_rng, Rng};
+    use rand::{rng, RngExt};
     use std::collections::HashMap;
     use std::fmt::{Debug, Formatter};
     use std::ops::RangeInclusive;
@@ -240,7 +242,7 @@ mod tests {
         impl TestString {
             fn new(rng: &mut ThreadRng, secret: String, chars: RangeInclusive<char>) -> Self {
                 let current = (0..secret.len())
-                    .map(|_| rng.gen_range(chars.clone()))
+                    .map(|_| rng.random_range(chars.clone()))
                     .collect::<Vec<_>>();
 
                 Self {
@@ -258,8 +260,8 @@ mod tests {
         impl Chromosome<ThreadRng, i32> for TestString {
             fn mutate(&mut self, rng: &mut ThreadRng) {
                 // let's assume mutations happen completely randomly, one "gene" at a time (i.e. one char at a time)
-                let gene_idx = rng.gen_range(0..self.secret.len());
-                let new_char = rng.gen_range(self.chars.clone());
+                let gene_idx = rng.random_range(0..self.secret.len());
+                let new_char = rng.random_range(self.chars.clone());
                 self.genes[gene_idx] = new_char;
             }
 
@@ -267,7 +269,7 @@ mod tests {
                 // Let's not assume anything here, simply mixing random genes from both parents
                 let genes = (0..self.secret.len())
                     .map(|idx| {
-                        if rng.gen_bool(0.5) {
+                        if rng.random_bool(0.5) {
                             // pick gene from self
                             self.genes[idx]
                         } else {
@@ -292,7 +294,7 @@ mod tests {
                     .count() as i32
             }
         }
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let pop_count = 1_000;
         let mut population = Vec::with_capacity(pop_count);
         for _ in 0..pop_count {
@@ -388,7 +390,7 @@ mod tests {
             }
         }
         fn random_color(rng: &mut ThreadRng) -> ColoredPeg {
-            match rng.gen_range(0..=5) {
+            match rng.random_range(0..=5) {
                 0 => ColoredPeg::Red,
                 1 => ColoredPeg::Yellow,
                 2 => ColoredPeg::Green,
@@ -403,7 +405,7 @@ mod tests {
         impl Chromosome<ThreadRng, i32> for CodeBreaker {
             fn mutate(&mut self, rng: &mut ThreadRng) {
                 // change one random color
-                let idx = rng.gen_range(0..4);
+                let idx = rng.random_range(0..4);
                 self.guess[idx] = random_color(rng);
             }
 
@@ -411,7 +413,7 @@ mod tests {
                 Self {
                     maker: self.maker.clone(),
                     guess: std::array::from_fn(|i| {
-                        if rng.gen::<f64>() < 0.5 {
+                        if rng.random::<f64>() < 0.5 {
                             self.guess[i]
                         } else {
                             other.guess[i]
@@ -443,7 +445,7 @@ mod tests {
             mutation_chance: 0.5,
             crossover_chance: 0.3,
         };
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut initial_pop = Vec::with_capacity(population_count);
         for _ in 0..population_count {
             initial_pop.push(CodeBreaker {

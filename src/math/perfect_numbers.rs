@@ -2,7 +2,7 @@ pub fn is_perfect_number(num: usize) -> bool {
     let mut sum = 0;
 
     for i in 1..num - 1 {
-        if num % i == 0 {
+        if num.is_multiple_of(i) {
             sum += i;
         }
     }
@@ -14,7 +14,7 @@ pub fn perfect_numbers(max: usize) -> Vec<usize> {
     let mut result: Vec<usize> = Vec::new();
 
     // It is not known if there are any odd perfect numbers, so we go around all the numbers.
-    for i in 1..max + 1 {
+    for i in 1..=max {
         if is_perfect_number(i) {
             result.push(i);
         }

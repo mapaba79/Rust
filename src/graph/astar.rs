@@ -50,9 +50,9 @@ pub fn astar<V: Ord + Copy, E: Ord + Copy + Add<Output = E> + Zero>(
         state: start,
     });
     while let Some(Candidate {
-        estimated_weight: _,
         real_weight,
         state: current,
+        ..
     }) = queue.pop()
     {
         if current == target {
@@ -62,8 +62,7 @@ pub fn astar<V: Ord + Copy, E: Ord + Copy + Add<Output = E> + Zero>(
             let real_weight = real_weight + weight;
             if weights
                 .get(&next)
-                .map(|&weight| real_weight < weight)
-                .unwrap_or(true)
+                .is_none_or(|&weight| real_weight < weight)
             {
                 // current allows us to reach next with lower weight (or at all)
                 // add next to the front
